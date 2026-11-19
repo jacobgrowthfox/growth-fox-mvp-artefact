@@ -6,6 +6,16 @@ It's a single-page dashboard (Executive, Paid Media, Data and Engineer foxes, Al
 as a multi-file artifact. Sample clients (Nordlys Coffee, Flamehouse Burgers) are generated in code; the real
 client (Hue Therapy) loads its Google Ads data from the artifact's shared store, exported from BigQuery.
 
+## Workflow
+
+Standing instruction from the owner: after every change, without asking first:
+
+1. Run `node tools/smoke.js` (and look at a screenshot for visual changes). Fix anything it reports.
+2. Commit with a clear message and push straight to `main`.
+3. Publish only the changed files to the artifact (see Publishing below), so `main` and the live page stay in step.
+
+If the owner says they edited files themselves, pull `main` first, then publish what changed.
+
 ## Layout
 
 Everything that gets published lives in `app/`. Paths in `app/` are the published paths.
