@@ -93,7 +93,6 @@
       <section class="sec" aria-label="Channels">
         <div class="sec-head"><div class="lead"><span class="eyebrow">Channels</span><span>${esc(rangeLabel(c))}. Results under one named rule; platform claims shown beside.</span></div><div class="filters">${rangeSeg()}</div></div>
         <div class="dqhead"><span class="big" style="color:var(--c)">${mt.fmt(v)}</span><span class="of">${esc(mt.label)} ${om('observed')}</span>${dpill(v, pv, mt.invert)}</div>
-        ${realNote(c)}
         <div class="epgrid">${cards}</div>
         <div class="callout">Channels are compared here to show where the opportunities are, not where to move budget. Each platform counts ${c.cfg.convNoun} under its own model, so their ${kpiName(c)} figures don’t add up or compare like-for-like.</div>
       </section>
