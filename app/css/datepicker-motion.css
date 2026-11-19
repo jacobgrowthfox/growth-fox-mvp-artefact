@@ -1,0 +1,98 @@
+.chg-title { font-size: 15px; font-weight: 600; color: var(--fg); margin: 0 0 6px; }
+/* Date range picker */
+.dp { position: relative; margin-left: auto; }
+section[aria-label^="What you changed"] > .sec-head > .lead { flex: 1 1 360px; min-width: 0; }
+.sec-head:has(.dp) > .lead { flex: 1 1 360px; min-width: 0; }
+.dp-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; font-size: 14px; color: var(--ink-2); white-space: nowrap; }
+.dp-btn:hover { border-color: var(--border-strong); }
+.dp-btn b { color: var(--fg); font-weight: 600; }
+.dp-btn svg { width: 16px; height: 16px; flex: none; color: var(--muted); }
+.dp-btn svg.chev { width: 12px; height: 12px; }
+.dp-btn[aria-expanded="true"] { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.dp-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; display: grid; grid-template-columns: 168px auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 16px 40px rgb(26 29 27 / .14); overflow: hidden; }
+.dp-pre { display: flex; flex-direction: column; gap: 2px; padding: 12px; background: var(--bg); border-right: 1px solid var(--divider); }
+.dp-pre button { text-align: left; border: 0; background: transparent; padding: 9px 12px; border-radius: 8px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.dp-pre button:hover { background: var(--seg); color: var(--fg); }
+.dp-pre button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.dp-note { margin-top: auto; padding: 8px 12px 2px; font-size: 12px; color: var(--faint); }
+.dp-cal { position: relative; padding: 14px 16px 12px; }
+.dp-nav { position: absolute; left: 10px; right: 10px; top: 8px; display: flex; justify-content: space-between; pointer-events: none; }
+.dp-nav .btn { pointer-events: auto; width: 32px; min-height: 32px; border-radius: 50%; }
+.dp-nav .btn:disabled { opacity: .35; cursor: default; }
+.dp-ms { display: flex; gap: 24px; }
+.dp-mh { text-align: center; font-size: 14px; font-weight: 600; height: 30px; line-height: 20px; }
+.dp-g { display: grid; grid-template-columns: repeat(7, 36px); row-gap: 2px; }
+.dp-g i { font-style: normal; font-size: 11px; color: var(--faint); text-align: center; padding: 4px 0; }
+.dp-g button, .dp-g span { height: 34px; display: grid; place-items: center; font-size: 13px; border: 0; background: transparent; color: var(--fg); }
+.dp-g button { cursor: pointer; border-radius: 8px; }
+.dp-g button:hover { background: var(--seg); }
+.dp-g span.off { color: var(--border-strong); }
+.dp-g button.in { background: var(--primary-soft); border-radius: 0; color: var(--primary); }
+.dp-g button.sa, .dp-g button.sb { background: var(--primary); color: var(--primary-fg); font-weight: 600; }
+.dp-g button.sa:not(.sb) { border-radius: 8px 0 0 8px; } .dp-g button.sb:not(.sa) { border-radius: 0 8px 8px 0; }
+.dp-cmp { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--divider); font-size: 13px; color: var(--ink-2); }
+.dp-cmp .seg button { font-size: 13px; padding: 5px 10px; min-height: 30px; }
+.dp-vs { color: var(--muted); font-size: 13px; }
+.dp-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--divider); }
+.dp-sel { margin-right: auto; font-size: 13px; color: var(--ink-2); }
+.dp-foot .btn:disabled { opacity: .45; cursor: default; }
+@media (max-width: 820px) {
+  .dp-pop { position: fixed; left: 16px; right: 16px; top: 96px; grid-template-columns: 1fr; max-height: calc(100vh - 120px); overflow-y: auto; }
+  .dp-pre { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--divider); }
+  .dp-note { width: 100%; margin: 0; }
+  .dp-ms .dp-m:first-child { display: none; }
+  .dp-g { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .dp-btn { white-space: normal; text-align: left; }
+}
+
+/* Fox animation */
+.fox .eye { transform-box: fill-box; transform-origin: center; animation: blink 5.5s infinite; }
+@keyframes blink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.15); } }
+/* Idle glances on the big fox: it looks left, up, right, down and back, with pauses in between.
+   Parallax sells the turn: eyes travel furthest, nose and muzzle less, the whole head turns slightly. */
+.fox .head, .fox .eyes, .fox .nose, .fox .muz { transform-box: view-box; }
+.fox .head { transform-origin: 24px 44px; }
+/* Glances and the hover bounce are driven from script (random directions); see foxMotion. */
+.nav .fox, .foxcard .fox { transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes glance-eyes {
+  0%, 8% { transform: translate(0, 0); }
+  12%, 22% { transform: translate(-2.6px, 0.2px); }     /* left */
+  27%, 34% { transform: translate(1.8px, -2px); }       /* up and right */
+  39%, 52% { transform: translate(0, 0); }
+  56%, 64% { transform: translate(2.6px, 0.4px); }      /* right */
+  69%, 76% { transform: translate(-1.2px, 1.8px); }     /* down and left */
+  81%, 100% { transform: translate(0, 0); }
+}
+@keyframes glance-nose {
+  0%, 8% { transform: translate(0, 0); }
+  12%, 22% { transform: translate(-1.6px, 0); }
+  27%, 34% { transform: translate(1.1px, -1px); }
+  39%, 52% { transform: translate(0, 0); }
+  56%, 64% { transform: translate(1.6px, 0.2px); }
+  69%, 76% { transform: translate(-0.7px, 1px); }
+  81%, 100% { transform: translate(0, 0); }
+}
+@keyframes glance-muz {
+  0%, 8% { transform: translate(0, 0); }
+  12%, 22% { transform: translate(-0.8px, 0); }
+  27%, 34% { transform: translate(0.5px, -0.5px); }
+  39%, 52% { transform: translate(0, 0); }
+  56%, 64% { transform: translate(0.8px, 0); }
+  69%, 76% { transform: translate(-0.3px, 0.5px); }
+  81%, 100% { transform: translate(0, 0); }
+}
+@keyframes glance-head {
+  0%, 8% { transform: rotate(0); }
+  12%, 22% { transform: rotate(-4deg) translateX(-0.5px); }
+  27%, 34% { transform: rotate(2.5deg) translateY(-0.4px); }
+  39%, 52% { transform: rotate(0); }
+  56%, 64% { transform: rotate(4deg) translateX(0.5px); }
+  69%, 76% { transform: rotate(-2deg) translateY(0.4px); }
+  81%, 100% { transform: rotate(0); }
+}
+@media (prefers-reduced-motion: reduce) { .fox .eye, .fox-hero .fox .head, .fox-hero .fox .eyes, .fox-hero .fox .nose, .fox-hero .fox .muz, .nav a:hover .fox .head, .nav a:hover .fox .eyes, .nav a:hover .fox .nose, .nav a:hover .fox .muz { animation: none; } }
+
+.empty { padding: 28px; text-align: center; color: var(--muted); border: 1px dashed var(--border-strong); border-radius: 16px; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--tip); color: #FFFFFF; padding: 12px 18px; border-radius: 12px; font-weight: 500; font-size: 14px; display: flex; gap: 14px; align-items: center; z-index: 50; box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
+.toast button { background: transparent; border: 0; color: inherit; text-decoration: underline; cursor: pointer; font-weight: 600; padding: 0; }
+.footnote { color: var(--faint); font-size: 13px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
