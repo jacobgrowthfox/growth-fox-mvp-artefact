@@ -37,16 +37,19 @@
       .concat(c.model.held.filter(h => h.platform === id).map(h => ({ title: h.title, text: h.text })));
     return { open, held, value: open.filter(r => r.unit === 'saved' || r.unit === 'revenue').reduce((s, r) => s + r.valuePerDay, 0) };
   }
-  function oppRow(c, r) {
-    const imp = r.impactTxt ? r.impactTxt.imp : r.confidence === 'investigate' ? (r.finding ? 'To look into' : 'To investigate') : r.bet ? `${betRange(c, r)}/day` : r.unit === 'cov' ? `+${r.cov} pts coverage` : r.unit === 'dq' ? `+${r.dq} data quality` : `${r.estimate ? '≈ ' : ''}+${m(r.valuePerDay, c)}/day`;
-    // Insight (what we found) and Action (what to do), each with its own label. Period findings drop the
-    // "(1 Sept 2024 – 30 Apr 2025)" suffix: the page's date picker already shows the period.
+  // Insight (what we found) and Action (what to do) lines for an opportunity, used on the Paid Media page and channel pages.
+  function oppLines(r) {
+    // Period findings drop the "(1 Sept 2024 – 30 Apr 2025)" suffix: the page's date picker already shows the period.
     // The action is cut to its first step ("…, then re-check after 14 days" stays on the detail page).
     const title = r.finding && r.title.endsWith(` (${r.finding.label})`) ? r.title.slice(0, -(r.finding.label.length + 3)) : r.title;
     const act = String(r.action || '').split(/(?<=[.!?])\s/)[0].split(', then ')[0].replace(/\.$/, '');
     const insIco = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 13.5V9.5M5.5 13.5V7M8.5 13.5V10.5"/><circle cx="11" cy="5.25" r="2.75"/><path d="M13 7.25 14.75 9"/></svg>';
     const actIco = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M5.25 8h5.25M8.25 5.75 10.5 8l-2.25 2.25"/></svg>';
-    return `<li><div class="opp"><div class="opp-ln"><span class="opp-k ins">${insIco}Insight</span><a class="t" href="#action/${encodeURIComponent(r.id)}">${esc(title)}</a></div>${act ? `<div class="opp-ln"><span class="opp-k act">${actIco}${r.confidence === 'investigate' ? 'Next step' : 'Action'}</span><span class="opp-a">${esc(act)}</span></div>` : ''}<div class="s"><span>${esc(AGENT[r.agent])}</span>${confBadge(r)}${checkChip(r)}${r.asOf ? `<span class="asof">${esc(r.asOf)}</span>` : ''}</div></div><div class="imp ${r.confidence === 'investigate' ? 'inv' : ''}">${esc(imp)}<small>${r.impactTxt ? esc(r.impactTxt.sub) : r.unit === 'cov' ? 'Engineer Fox fix' : r.unit === 'dq' ? 'Data Fox fix' : r.unit === 'revenue' ? 'revenue' : r.unit === 'none' ? 'impact unknown' : r.estimate ? 'saved, estimate' : 'saved'}</small></div></li>`;
+    return `<div class="opp-ln"><span class="opp-k ins">${insIco}Insight</span><a class="t" href="#action/${encodeURIComponent(r.id)}">${esc(title)}</a></div>${act ? `<div class="opp-ln"><span class="opp-k act">${actIco}${r.confidence === 'investigate' ? 'Next step' : 'Action'}</span><span class="opp-a">${esc(act)}</span></div>` : ''}`;
+  }
+  function oppRow(c, r) {
+    const imp = r.impactTxt ? r.impactTxt.imp : r.confidence === 'investigate' ? (r.finding ? 'To look into' : 'To investigate') : r.bet ? `${betRange(c, r)}/day` : r.unit === 'cov' ? `+${r.cov} pts coverage` : r.unit === 'dq' ? `+${r.dq} data quality` : `${r.estimate ? '≈ ' : ''}+${m(r.valuePerDay, c)}/day`;
+    return `<li><div class="opp">${oppLines(r)}<div class="s"><span>${esc(AGENT[r.agent])}</span>${confBadge(r)}${checkChip(r)}${r.asOf ? `<span class="asof">${esc(r.asOf)}</span>` : ''}</div></div><div class="imp ${r.confidence === 'investigate' ? 'inv' : ''}">${esc(imp)}<small>${r.impactTxt ? esc(r.impactTxt.sub) : r.unit === 'cov' ? 'Engineer Fox fix' : r.unit === 'dq' ? 'Data Fox fix' : r.unit === 'revenue' ? 'revenue' : r.unit === 'none' ? 'impact unknown' : r.estimate ? 'saved, estimate' : 'saved'}</small></div></li>`;
   }
   function pageMedia(c) {
     const { R, O } = periods(c); const Rn = Math.min(R, c.data.n); const e = isEcom(c), f = FOX.paid;
@@ -83,7 +86,7 @@
     const acts = foxActions(c, 'paid');
     const total = acts.filter(a => a.r.confidence !== 'investigate').reduce((s, a) => s + a.r.focus, 0);
     const summary = `${isFinite(v) ? `${mt.label} is ${mt.fmt(v)} over ${perTxt(c)}${pv && isFinite(pv) ? `, ${(e ? v > pv : v < pv) ? 'better' : 'worse'} than the period before` : ''}.` : `No ${c.cfg.convNoun} were recorded over ${perTxt(c)}, so there’s no ${mt.label.toLowerCase()} to show.`} ${ids.length} channel${ids.length === 1 ? '' : 's'}, ${acts.length} open opportunit${acts.length === 1 ? 'y' : 'ies'}.${total ? ` Doing them would ${e ? `add about +${total.toFixed(2)} to blended ROAS` : `cut blended cost per lead by about ${m(-total, c, 2)}`}.` : ''}${!c.model.warm ? ` Trend recommendations start after warmup, in ${c.model.warmLeft} days.` : ''}`;
-    const actList = acts.length ? `<ol class="actlist">${acts.map((a, i) => `<li><span class="rank">${i + 1}</span><div style="min-width:0"><a class="t" href="#action/${encodeURIComponent(a.r.id)}">${esc(a.r.title)}</a><div class="s"><span>${esc(CHANNELS[a.r.platform] ? CHANNELS[a.r.platform].name : '')}</span><span>${esc(AREAS.find(x => x.id === areaOf(a.r)).name)}</span>${confBadge(a.r)}${checkChip(a.r)}</div></div><div class="imp ${a.score <= 0 ? 'inv' : ''}">${esc(a.imp)}<small>${esc(a.sub)}</small></div></li>`).join('')}</ol>` : '<div class="empty">No open actions.</div>';
+    const actList = acts.length ? `<ol class="actlist">${acts.map((a, i) => `<li><span class="rank">${i + 1}</span><div class="opp">${oppLines(a.r)}<div class="s"><span>${esc(CHANNELS[a.r.platform] ? CHANNELS[a.r.platform].name : '')}</span><span>${esc(AREAS.find(x => x.id === areaOf(a.r)).name)}</span>${confBadge(a.r)}${checkChip(a.r)}</div></div><div class="imp ${a.score <= 0 ? 'inv' : ''}">${esc(a.imp)}<small>${esc(a.sub)}</small></div></li>`).join('')}</ol>` : '<div class="empty">No open actions.</div>';
     return `<div class="page" style="${foxVars('paid')}">
       <section class="fox-hero" aria-label="Executive summary"><div class="id">${foxSvg('paid', true)}<div><h1>${f.name}</h1><div class="role">${esc(f.role)}</div></div></div>
         <div><span class="eyebrow">Executive summary · today</span><p class="sum">${esc(summary)}</p></div></section>
