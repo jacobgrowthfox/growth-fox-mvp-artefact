@@ -132,7 +132,17 @@ details.wk summary { cursor: pointer; font-size: 14px; font-weight: 500; color: 
 .kpis .kpi .value { white-space: nowrap; }
 .actlist.oppl li { grid-template-columns: minmax(0, 1fr) 200px; padding: 12px 0; }
 .actlist.oppl li:first-child { padding-top: 0; }
-@media (max-width: 560px) { .area-empty, .area-link, .actlist.oppl { padding-left: 0; } .actlist.oppl li { grid-template-columns: 1fr; } .actlist.oppl .imp { text-align: left; grid-column: 1; } }
+/* Opportunity rows: an Insight line and an Action line, each with a fixed-width label so the texts align */
+.opp { min-width: 0; display: grid; gap: 6px; }
+.opp-ln { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; align-items: baseline; }
+.opp-k { display: inline-flex; align-items: center; gap: 5px; justify-self: start; padding: 2px 8px 2px 6px; border-radius: 8px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+.opp-k svg { width: 13px; height: 13px; flex: none; }
+.opp-k.ins { background: var(--seg); color: var(--ink-2); }
+.opp-k.act { background: var(--t); color: var(--c); }
+.opp-a { font-size: 15px; color: var(--fg); line-height: 1.45; }
+.opp .s { margin: 2px 0 0 108px; }
+@media (max-width: 560px) { .area-empty, .area-link, .actlist.oppl { padding-left: 0; } .actlist.oppl li { grid-template-columns: 1fr; } .actlist.oppl .imp { text-align: left; grid-column: 1; }
+  .opp-ln { grid-template-columns: 1fr; row-gap: 4px; } .opp .s { margin-left: 0; } }
 /* Engineer Fox */
 .links { display: grid; gap: 8px; }
 .lk { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; font-size: 14px; }

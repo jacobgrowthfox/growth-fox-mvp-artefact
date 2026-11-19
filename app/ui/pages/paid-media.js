@@ -39,7 +39,14 @@
   }
   function oppRow(c, r) {
     const imp = r.impactTxt ? r.impactTxt.imp : r.confidence === 'investigate' ? (r.finding ? 'To look into' : 'To investigate') : r.bet ? `${betRange(c, r)}/day` : r.unit === 'cov' ? `+${r.cov} pts coverage` : r.unit === 'dq' ? `+${r.dq} data quality` : `${r.estimate ? '≈ ' : ''}+${m(r.valuePerDay, c)}/day`;
-    return `<li><div style="min-width:0"><a class="t" href="#action/${encodeURIComponent(r.id)}">${esc(r.title)}</a><div class="s"><span>${esc(AGENT[r.agent])}</span>${confBadge(r)}${checkChip(r)}${r.asOf ? `<span class="asof">${esc(r.asOf)}</span>` : ''}</div></div><div class="imp ${r.confidence === 'investigate' ? 'inv' : ''}">${esc(imp)}<small>${r.impactTxt ? esc(r.impactTxt.sub) : r.unit === 'cov' ? 'Engineer Fox fix' : r.unit === 'dq' ? 'Data Fox fix' : r.unit === 'revenue' ? 'revenue' : r.unit === 'none' ? 'impact unknown' : r.estimate ? 'saved, estimate' : 'saved'}</small></div></li>`;
+    // Insight (what we found) and Action (what to do), each with its own label. Period findings drop the
+    // "(1 Sept 2024 – 30 Apr 2025)" suffix: the page's date picker already shows the period.
+    // The action is cut to its first step ("…, then re-check after 14 days" stays on the detail page).
+    const title = r.finding && r.title.endsWith(` (${r.finding.label})`) ? r.title.slice(0, -(r.finding.label.length + 3)) : r.title;
+    const act = String(r.action || '').split(/(?<=[.!?])\s/)[0].split(', then ')[0].replace(/\.$/, '');
+    const insIco = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 13.5V9.5M5.5 13.5V7M8.5 13.5V10.5"/><circle cx="11" cy="5.25" r="2.75"/><path d="M13 7.25 14.75 9"/></svg>';
+    const actIco = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M5.25 8h5.25M8.25 5.75 10.5 8l-2.25 2.25"/></svg>';
+    return `<li><div class="opp"><div class="opp-ln"><span class="opp-k ins">${insIco}Insight</span><a class="t" href="#action/${encodeURIComponent(r.id)}">${esc(title)}</a></div>${act ? `<div class="opp-ln"><span class="opp-k act">${actIco}${r.confidence === 'investigate' ? 'Next step' : 'Action'}</span><span class="opp-a">${esc(act)}</span></div>` : ''}<div class="s"><span>${esc(AGENT[r.agent])}</span>${confBadge(r)}${checkChip(r)}${r.asOf ? `<span class="asof">${esc(r.asOf)}</span>` : ''}</div></div><div class="imp ${r.confidence === 'investigate' ? 'inv' : ''}">${esc(imp)}<small>${r.impactTxt ? esc(r.impactTxt.sub) : r.unit === 'cov' ? 'Engineer Fox fix' : r.unit === 'dq' ? 'Data Fox fix' : r.unit === 'revenue' ? 'revenue' : r.unit === 'none' ? 'impact unknown' : r.estimate ? 'saved, estimate' : 'saved'}</small></div></li>`;
   }
   function pageMedia(c) {
     const { R, O } = periods(c); const Rn = Math.min(R, c.data.n); const e = isEcom(c), f = FOX.paid;
