@@ -5,6 +5,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
+const { makeDocs } = require('./fixtures/hue-therapy');
 
 const ROOT = path.join(__dirname, '..', 'app');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
@@ -24,25 +25,30 @@ const server = http.createServer((req, res) => {
 
 const ROUTES = ['overview', 'paid', 'paid/gads', 'paid/meta', 'analytics', 'analytics/meta', 'analytics/ga4', 'analytics/shop', 'analytics/app',
   'param/ga4/purchase.currency', 'engineer', 'recs', 'ledger', 'brief', 'action/ps-neg', 'action/hist-h1'];
-const CLIENTS = ['nordlys', 'flamehouse', 'hue-therapy']; // hue-therapy is a real client: outside claude.ai it shows its waiting page
+// hue-therapy is a real client: outside claude.ai it shows its waiting page, so it runs twice: once as is, and once with the
+// local fixture shaped like its export (invented numbers, tools/fixtures/hue-therapy.js) so its Stage 1 pages render.
+const CLIENTS = ['nordlys', 'flamehouse', 'hue-therapy', 'hue-therapy+fixture'];
+const END = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() - 864e5; })();
 
 server.listen(0, '127.0.0.1', async () => {
   const url = `http://127.0.0.1:${server.address().port}/`;
   const browser = await chromium.launch();
   const errors = [];
   let pages = 0;
-  for (const client of CLIENTS) {
+  for (const run of CLIENTS) {
+    const [client, fx] = run.split('+');
     const ctx = await browser.newContext({ reducedMotion: 'reduce' });
     const page = await ctx.newPage();
-    page.on('pageerror', e => errors.push(`${client} #${page.url().split('#')[1]}: ${e.message}`));
-    page.on('console', m => { if (m.type() === 'error') errors.push(`${client} console: ${m.text()}`); });
+    if (fx) await page.addInitScript(d => { window.__gfFixture = { 'hue-therapy': d }; }, makeDocs({ endT: END }));
+    page.on('pageerror', e => errors.push(`${run} #${page.url().split('#')[1]}: ${e.message}`));
+    page.on('console', m => { if (m.type() === 'error') errors.push(`${run} console: ${m.text()}`); });
     await page.addInitScript(c => { try { localStorage.setItem('gf.client', JSON.stringify(c)); } catch (e) {} }, client);
     await page.goto(url + '#overview', { waitUntil: 'load' });
     for (const r of ROUTES) {
       await page.evaluate(h => { location.hash = h; }, r);
       await page.waitForTimeout(50);
       const len = await page.evaluate(() => document.querySelector('#app').innerHTML.length);
-      if (len < 100) errors.push(`${client} #${r}: page rendered almost nothing (${len} characters)`);
+      if (len < 100) errors.push(`${run} #${r}: page rendered almost nothing (${len} characters)`);
       pages++;
     }
     await ctx.close();

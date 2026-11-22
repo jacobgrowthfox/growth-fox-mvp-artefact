@@ -61,12 +61,22 @@
       const str = v => v == null ? '' : String(v).slice(0, 200), arr = v => Array.isArray(v) ? v.filter(x => x && typeof x === 'object') : [];
       settings = {
         snapshotDate: day(sn.snapshotDate),
-        campaigns: arr(sn.campaigns).map(c => ({ id: str(c.id), name: str(c.name), status: str(c.status), servingStatus: str(c.servingStatus), channel: str(c.channel), bidding: str(c.bidding), targetRoas: num(c.targetRoas), budget: num(c.budget) })),
+        campaigns: arr(sn.campaigns).map(c => ({ id: str(c.id), name: str(c.name), status: str(c.status), servingStatus: str(c.servingStatus), channel: str(c.channel), bidding: str(c.bidding), targetRoas: num(c.targetRoas), budget: num(c.budget),
+          // Optional fields for the Stage 1 gates (absent from the export today; each gate part is Not Assessed without them)
+          goalActions: Array.isArray(c.goalActions) ? c.goalActions.map(str) : null, geoTargetType: c.geoTargetType == null ? null : str(c.geoTargetType),
+          locations: Array.isArray(c.locations) ? arr(c.locations).map(l => ({ name: str(l.name), country: str(l.country), negative: l.negative === true })) : null,
+          euPolitical: c.euPolitical == null ? null : str(c.euPolitical), bidCeiling: c.bidCeiling == null ? null : num(c.bidCeiling), bidFloor: c.bidFloor == null ? null : num(c.bidFloor) })),
         adGroups: arr(sn.adGroups).map(g => ({ campaign: str(g.campaign), id: str(g.id), name: str(g.name), status: str(g.status), type: str(g.type), targetCpa: num(g.targetCpa), targetRoas: num(g.targetRoas), bidding: str(g.bidding) })),
         keywords: arr(sn.keywords).map(k => ({ campaign: str(k.campaign), adGroup: str(k.adGroup), id: str(k.id), text: str(k.text), match: str(k.match), negative: k.negative === true, status: str(k.status), approval: str(k.approval), serving: str(k.serving), qs: num(k.qs) })),
         campaignNegatives: arr(sn.campaignNegatives).map(n => ({ campaign: str(n.campaign), text: str(n.text), status: str(n.status) })),
-        ads: arr(sn.ads).map(a => ({ campaign: str(a.campaign), adGroup: str(a.adGroup), id: str(a.id), type: str(a.type), strength: str(a.strength), approval: str(a.approval), status: str(a.status) })),
+        ads: arr(sn.ads).map(a => ({ campaign: str(a.campaign), adGroup: str(a.adGroup), id: str(a.id), type: str(a.type), strength: str(a.strength), approval: str(a.approval), status: str(a.status), finalUrlError: a.finalUrlError == null ? null : str(a.finalUrlError) })),
+        conversionActions: Array.isArray(sn.conversionActions) ? arr(sn.conversionActions).map(a => ({ id: str(a.id), name: str(a.name), category: str(a.category), primary: a.primary === true, status: str(a.status) })) : null,
+        account: sn.account && typeof sn.account === 'object' ? { status: str(sn.account.status), billingOk: sn.account.billingOk == null ? null : sn.account.billingOk === true, policyHold: sn.account.policyHold == null ? null : sn.account.policyHold === true } : null,
       };
+      // Which optional parts the export carries (a gate part without its data is Not Assessed, never assumed fine)
+      const some = (list, k) => list.some(x => x[k] != null);
+      settings.has = { conversions: !!settings.conversionActions, locations: some(settings.campaigns, 'locations'), geoType: some(settings.campaigns, 'geoTargetType'),
+        eu: some(settings.campaigns, 'euPolitical'), bidCaps: some(settings.campaigns, 'bidCeiling') || some(settings.campaigns, 'bidFloor'), urls: some(settings.ads, 'finalUrlError'), account: !!settings.account };
     }
     REAL[id] = { byDay, seg, ads, settings };
     return true;

@@ -75,7 +75,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 /* Rubric check pills: one hue per check (soft tint + dark ink of the same hue, all ≥ 7:1). Same pill shape as .chip. */
 :root { --ck-blue: #E3EAF8; --ck-blue-ink: #1C377A; --ck-violet: #ECE7F6; --ck-violet-ink: #43307A; --ck-amber: #FBF0DC; --ck-amber-ink: #7A4200; --ck-teal: #DDF2EF; --ck-teal-ink: #0E4A46;
   --ck-rose: #F8E4EC; --ck-rose-ink: #6E1F40; --ck-green: #E6F3EC; --ck-green-ink: #0E5A47; --ck-slate: #E8ECF1; --ck-slate-ink: #2E3A4B; --ck-orange: #F8E9DE; --ck-orange-ink: #7A3510; --ck-brown: #F1E8DF; --ck-brown-ink: #5A3A1E; }
-.checkchip { cursor: help; background: var(--seg); color: var(--ink-2); }
+.checkchip { cursor: help; background: var(--seg); color: var(--ink-2); white-space: normal; max-width: 100%; }
 .checkchip.ck-blue { background: var(--ck-blue); color: var(--ck-blue-ink); } .checkchip.ck-violet { background: var(--ck-violet); color: var(--ck-violet-ink); }
 .checkchip.ck-amber { background: var(--ck-amber); color: var(--ck-amber-ink); } .checkchip.ck-teal { background: var(--ck-teal); color: var(--ck-teal-ink); }
 .checkchip.ck-rose { background: var(--ck-rose); color: var(--ck-rose-ink); } .checkchip.ck-green { background: var(--ck-green); color: var(--ck-green-ink); }
@@ -197,3 +197,26 @@ i.arr.quar { background: var(--bad); opacity: .8; }
 @media (max-width: 700px) { .connmap { display: none; } .connlist { display: grid; } }
 .covline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--divider); font-size: 15px; color: var(--ink-2); }
 .covline .seg { margin-left: auto; }
+
+/* Stage 1 readiness (Paid Media Fox, Google Ads): three categories, their gates and the advisory checks */
+.rd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+.rd-cat { border: 1px solid var(--border); border-radius: 16px; padding: 18px; display: grid; gap: 10px; min-width: 0; border-top-width: 4px; }
+.rd-cat.st-critical { border-top-color: var(--bad); } .rd-cat.st-attention { border-top-color: var(--warn); } .rd-cat.st-ready { border-top-color: var(--good); } .rd-cat.st-not_assessed { border-top-color: var(--base); }
+.rd-h { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.rd-h > div { display: grid; gap: 2px; } .rd-h b { font-weight: 600; } .rd-h span:not(.chip) { color: var(--muted); font-size: 13px; }
+.rd-why { margin: 0; font-size: 14px; color: var(--ink-2); }
+.rd-gates { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.rd-gate { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px; min-width: 0; }
+.rd-gh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.rd-gh b { font-weight: 500; } .rd-gh small { color: var(--muted); font-size: 12px; } .rd-gh .chip { margin-left: auto; }
+.rd-sum, .rd-camps, .rd-need, .rd-data { margin: 0; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+.rd-camps { color: var(--fg); }
+.rd-need { display: flex; gap: 6px; align-items: flex-start; color: var(--warn-ink); } .rd-need svg { width: 14px; height: 14px; flex: none; margin-top: 2px; }
+.rd-data { color: var(--muted); }
+.rd-parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; }
+.rd-parts li { display: flex; align-items: center; gap: 8px; } .rd-parts span { margin-left: auto; color: var(--muted); }
+.rd-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--base); }
+.rd-dot.good { background: var(--good); } .rd-dot.warn { background: var(--warn); } .rd-dot.bad { background: var(--bad); }
+.rd-ev summary { cursor: pointer; font-size: 13px; color: var(--primary); }
+.rd-ev .tbl-wrap { margin-top: 8px; }
+.rd-adv { margin: 0; font-size: 13px; color: var(--muted); } .rd-adv b { font-weight: 500; color: var(--ink-2); } .rd-n { color: var(--warn-ink); }

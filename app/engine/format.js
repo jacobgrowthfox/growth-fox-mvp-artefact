@@ -13,4 +13,4 @@
 
 
   /* The engine's public interface, used by the UI files as GF.* */
-  const GF = { PM_CHECKS, rubricCheck, SETUP_SCAN, checksRun, scanSetup, periodRecs, settingsRecs, REAL, setReal, realDay, isoD, SPEND_SCAN, scanSpend, spanTxt, SEGMENT_SCAN, scanSegments, VOL_MIN, validRule, ENGINEER, coverage, CLIENTS, CHECK_GROUPS, PLATFORMS, CONF_W, CATS, CAT_W, END, DAY, generate, win, campWindow, dqByPlatform, dqOverall, epWindow, epTrend, epStatus, missAny, build, money, fmt1, short, dayLabel, fillDates };
+  const GF = { PM_CHECKS, PM_TAGS, PROFILE_FIELDS, PROFILE_QUESTIONS, FIELD_LABEL, OBJECTIVES, COUNTRY_NAMES, setProfile, profileOf, CHECK_INPUTS, checkInputs, CATEGORIES, GATES, readiness, gateRecs, reliability, eligibility, applyEligibility, recIntent, rubricCheck, SETUP_SCAN, checksRun, scanSetup, periodRecs, settingsRecs, REAL, setReal, realDay, isoD, SPEND_SCAN, scanSpend, spanTxt, SEGMENT_SCAN, scanSegments, VOL_MIN, validRule, ENGINEER, coverage, CLIENTS, CHECK_GROUPS, PLATFORMS, CONF_W, CATS, CAT_W, END, DAY, generate, win, campWindow, dqByPlatform, dqOverall, epWindow, epTrend, epStatus, missAny, build, money, fmt1, short, dayLabel, fillDates };

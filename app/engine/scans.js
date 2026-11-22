@@ -72,7 +72,9 @@
     factor: 2,                // segment CPA ≥ 2 × campaign CPA; with 0 conversions, segment spend ≥ 2 × campaign CPA
   };
   const SEGMENT_ID = 'pm.2.audiences.segment_cpa_outlier';
-  const COUNTRY = { 2208: 'Denmark', 2752: 'Sweden', 2578: 'Norway', 2276: 'Germany', 2826: 'United Kingdom' };
+  // Google Ads country criteria (2000 + ISO 3166 numeric). Also the country list in the business profile's markets question.
+  const COUNTRY = { 2208: 'Denmark', 2752: 'Sweden', 2578: 'Norway', 2246: 'Finland', 2352: 'Iceland', 2276: 'Germany', 2528: 'Netherlands', 2056: 'Belgium', 2250: 'France',
+    2826: 'United Kingdom', 2372: 'Ireland', 2040: 'Austria', 2756: 'Switzerland', 2380: 'Italy', 2724: 'Spain', 2620: 'Portugal', 2616: 'Poland', 2840: 'United States', 2124: 'Canada', 2036: 'Australia' };
   function segName(type, value, label) {
     if (type === 'device') return { MOBILE: 'Mobile', DESKTOP: 'Desktop', TABLET: 'Tablet', CONNECTED_TV: 'Connected TV', OTHER: 'Other devices' }[value] || `Device ${value}`;
     if (type === 'country') return COUNTRY[value] || `Country ${value}`;
@@ -143,7 +145,7 @@
     budgetLimited: { days: 7, minSpend: 500, minLostShare: 0.1 },              // 7-day spend ≥ 500 kr and impressions lost to budget ≥ 10% of eligible
     fatigue: { days: 7, base: 21, minImp: 100, minImpBase: 300, ratio: 0.7 },   // ad CTR in 7 days ≤ 0.7 × its CTR in the 21 days before
     smartBidding: ['MAXIMIZE_CONVERSIONS', 'MAXIMIZE_CONVERSION_VALUE', 'TARGET_CPA', 'TARGET_ROAS'],
-    target: { days: 28, cpaFactor: 0.7, roasFactor: 1.3 },                     // target CPA < 0.7 × actual, or target ROAS > 1.3 × actual
+    target: { days: 28 },                                                       // target CPA below the campaign's own best week in 28 days (GC-5: no universal factor)
   };
   const SETUP_IDS = { budgetLimited: 'pm.1.setup.search_budget_limited', fatigue: 'pm.2.creative_lp.creative_fatigue', broad: 'pm.1.setup.broad_without_smart_bidding',
     conflicts: 'pm.1.setup.keyword_conflicts', target: 'pm.1.setup.target_far_from_actual', notServing: 'pm.1.setup.not_serving', strength: 'pm.2.creative_lp.ad_strength_poor', disapproved: 'pm.2.creative_lp.creative_disapproved' };
@@ -211,24 +213,54 @@
     if (match === 'PHRASE') return (' ' + k + ' ').includes(' ' + n + ' ');
     const kws = new Set(k.split(' ')); return n.split(' ').every(w => kws.has(w));
   }
-  function settingsRecs(cfg, data) {
-    const R = REAL[cfg.id]; if (!cfg.real || !R || !R.settings) return [];
-    const S = R.settings, T = SETUP_SCAN, recs = [], plat = PLATFORMS.gads, N = cfg.convNoun, N1 = cfg.convNounOne;
+  /* What the settings snapshot says, computed once and shared by the settings recommendations below and the
+     Stage 1 gates (engine/readiness.js), so a gate never re-implements a check. */
+  function settingsFacts(cfg, data) {
+    const R = REAL[cfg.id]; if (!cfg.real || !R || !R.settings) return null;
+    const S = R.settings, T = SETUP_SCAN;
     const snapT = S.snapshotDate ? new Date(S.snapshotDate + 'T12:00:00').getTime() : null, snap = snapT ? dFmt(snapT, true) : 'the latest snapshot';
     const asOf = `Settings as of ${snap}`;
-    const campOn = id => { const c = S.campaigns.find(x => x.id === id); return c && c.status === 'ENABLED'; };
-    const agOn = id => { const g = S.adGroups.find(x => x.id === id); return g && g.status === 'ENABLED'; };
+    const campOn = id => { const c = S.campaigns.find(x => x.id === id); return !!c && c.status === 'ENABLED'; };
+    const agOn = id => { const g = S.adGroups.find(x => x.id === id); return !!g && g.status === 'ENABLED'; };
     const cName = id => (S.campaigns.find(x => x.id === id) || cfg.campaigns.find(x => x.id === id) || { name: id }).name;
     const gName = id => (S.adGroups.find(x => x.id === id) || { name: id }).name;
     const live = S.keywords.filter(k => !k.negative && k.status === 'ENABLED' && campOn(k.campaign) && agOn(k.adGroup));
+    const bidOf = k => { const g = S.adGroups.find(x => x.id === k.adGroup), c = S.campaigns.find(x => x.id === k.campaign); return (g && g.bidding) || (c && c.bidding) || ''; };
+    const broad = live.filter(k => k.match === 'BROAD' && !T.smartBidding.includes(bidOf(k)));
+    const conflicts = [];
+    for (const k of live) {
+      for (const n of S.keywords.filter(x => x.negative && x.status === 'ENABLED' && x.adGroup === k.adGroup)) if (negBlocks(n.text, n.match, k.text)) conflicts.push({ campaign: k.campaign, k, neg: n.text, level: `Ad group (${String(n.match).toLowerCase()})` });
+      for (const n of S.campaignNegatives.filter(x => x.status === 'ENABLED' && x.campaign === k.campaign)) if (negBlocks(n.text, 'BROAD', k.text)) conflicts.push({ campaign: k.campaign, k, neg: n.text, level: 'Campaign (treated as broad)' });
+    }
+    // Target CPA tighter than any week the campaign achieved in the last 28 days (its own results, no universal factor)
+    const D = T.target.days, last = data.days.slice(-D), targets = [];
+    for (const g of S.adGroups.filter(g => g.status === 'ENABLED' && campOn(g.campaign) && g.targetCpa > 0)) {
+      const cs = d => (d.camps[g.campaign] || {}), sp = last.reduce((a, d) => a + (cs(d).spend || 0), 0), cv = last.reduce((a, d) => a + (cs(d).plat || 0), 0);
+      const weeks = []; for (let w = 0; w * 7 < last.length; w++) { const sl = last.slice(Math.max(0, last.length - (w + 1) * 7), last.length - w * 7); const ws = sl.reduce((a, d) => a + (cs(d).spend || 0), 0), wc = sl.reduce((a, d) => a + (cs(d).plat || 0), 0); if (wc > 0) weeks.push(ws / wc); }
+      if (!(cv > 0) || !weeks.length) continue; // no conversions: no result to compare the target with
+      const best = Math.min(...weeks);
+      if (g.targetCpa >= best) continue;
+      targets.push({ g, campaign: g.campaign, actual: sp / cv, best, spend: sp, conv: cv, weeks: weeks.length });
+    }
+    const ns = [];
+    for (const c of S.campaigns.filter(c => c.status === 'ENABLED' && c.servingStatus && c.servingStatus !== 'SERVING')) ns.push({ campaign: c.id, what: 'Campaign', name: c.name, why: `serving status ${c.servingStatus.toLowerCase().replace(/_/g, ' ')}` });
+    for (const g of S.adGroups.filter(g => g.status === 'ENABLED' && campOn(g.campaign) && !S.ads.some(a => a.adGroup === g.id && a.status === 'ENABLED'))) ns.push({ campaign: g.campaign, what: 'Ad group', name: g.name, adGroup: g.id, why: 'no enabled ads' });
+    for (const k of live.filter(k => k.serving && k.serving !== 'ELIGIBLE')) ns.push({ campaign: k.campaign, what: 'Keyword', name: k.text, why: `serving status ${k.serving.toLowerCase().replace(/_/g, ' ')}` });
+    const poor = S.ads.filter(a => a.status === 'ENABLED' && a.type === 'RESPONSIVE_SEARCH_AD' && a.strength === 'POOR');
+    const dis = S.ads.filter(a => a.status === 'ENABLED' && a.approval === 'DISAPPROVED');
+    return { R, S, T, asOf, campOn, agOn, cName, gName, live, bidOf, broad, conflicts, targets, ns, poor, dis };
+  }
+  function settingsRecs(cfg, data) {
+    const F = settingsFacts(cfg, data); if (!F) return [];
+    const { R, S, T, asOf, cName, gName, live } = F, recs = [], N = cfg.convNoun, N1 = cfg.convNounOne;
     const mk = (id, o) => recs.push(Object.assign({
       id, agent: 'settings', fox: 'paid', platform: 'gads', kind: 'setup', unit: 'none', valuePerDay: 0, spendChangedPerDay: 0, effort: 'low', minutes: 10,
       confidence: 'strong', owner: 'You', verifyDays: 7, labels: { spend: null, conv: 'observed' }, focus: 0, draft: true, bet: false, asOf, score: 0,
-      impactTxt: { k: 'Setting to fix', imp: 'Setting to fix', sub: asOf.toLowerCase().replace('settings', 'settings') },
+      impactTxt: { k: 'Setting to fix', imp: 'Setting to fix', sub: asOf.toLowerCase() },
     }, o));
     const byCamp = list => { const m = {}; for (const x of list) (m[x.campaign] = m[x.campaign] || []).push(x); return Object.entries(m); };
     // 3. Broad match without smart bidding
-    for (const [cid, list] of byCamp(live.filter(k => k.match === 'BROAD').filter(k => { const g = S.adGroups.find(x => x.id === k.adGroup), c = S.campaigns.find(x => x.id === cid0(k)); const b = (g && g.bidding) || (c && c.bidding) || ''; return !T.smartBidding.includes(b); }))) {
+    for (const [cid, list] of byCamp(F.broad)) {
       const c = S.campaigns.find(x => x.id === cid);
       mk(`set-broad-${cid}`, { area: 'setup', check: SETUP_IDS.broad, campaign: cName(cid),
         title: `${list.length} broad-match keyword${list.length === 1 ? '' : 's'} in ${cName(cid)} run without smart bidding`,
@@ -239,14 +271,8 @@
         rule: `An enabled broad-match keyword in an enabled campaign and ad group whose bidding isn’t ${T.smartBidding.map(b => b.toLowerCase().replace(/_/g, ' ')).join(', ')}. Check ${SETUP_IDS.broad}.`,
         evidence: { cols: ['Keyword', 'Ad group', 'Bidding'], rows: list.map(k => [k.text, gName(k.adGroup), (S.adGroups.find(g => g.id === k.adGroup) || {}).bidding || (c && c.bidding) || '—']), money: [], rules: [], verdict: `${asOf}.` } });
     }
-    function cid0(k) { return k.campaign; }
     // 4. Positive keywords blocked by a negative
-    const conflicts = [];
-    for (const k of live) {
-      for (const n of S.keywords.filter(x => x.negative && x.status === 'ENABLED' && x.adGroup === k.adGroup)) if (negBlocks(n.text, n.match, k.text)) conflicts.push({ campaign: k.campaign, k, neg: n.text, level: `Ad group (${String(n.match).toLowerCase()})` });
-      for (const n of S.campaignNegatives.filter(x => x.status === 'ENABLED' && x.campaign === k.campaign)) if (negBlocks(n.text, 'BROAD', k.text)) conflicts.push({ campaign: k.campaign, k, neg: n.text, level: 'Campaign (treated as broad)' });
-    }
-    for (const [cid, list] of byCamp(conflicts)) {
+    for (const [cid, list] of byCamp(F.conflicts)) {
       const kws = [...new Set(list.map(x => x.k.text))];
       mk(`set-conflicts-${cid}`, { area: 'setup', check: SETUP_IDS.conflicts, campaign: cName(cid),
         title: `${kws.length} keyword${kws.length === 1 ? ' is' : 's are'} blocked by negative keywords in ${cName(cid)}`,
@@ -257,27 +283,21 @@
         rule: `An enabled positive keyword blocked by an enabled negative: exact negatives by the same text, phrase negatives contained in the keyword, broad negatives with all their words in it; campaign negatives treated as broad. Check ${SETUP_IDS.conflicts}.`,
         evidence: { cols: ['Keyword', 'Blocked by', 'Negative level'], rows: list.map(x => [x.k.text, x.neg, x.level]), money: [], rules: [], verdict: `${asOf}.` } });
     }
-    // 5. Target CPA tighter than actual results (target ROAS: no conversion values in our data)
-    const D = T.target.days, last = data.days.slice(-D);
-    for (const g of S.adGroups.filter(g => g.status === 'ENABLED' && campOn(g.campaign) && g.targetCpa > 0)) {
-      const sp = last.reduce((a, d) => a + ((d.camps[g.campaign] || {}).spend || 0), 0), cv = last.reduce((a, d) => a + ((d.camps[g.campaign] || {}).plat || 0), 0);
-      if (!(cv > 0)) continue; const actual = sp / cv;
-      if (g.targetCpa >= T.target.cpaFactor * actual) continue;
+    // 5. Target CPA tighter than every week the campaign achieved (target ROAS: no conversion values in our data)
+    const D = T.target.days;
+    for (const x of F.targets) {
+      const g = x.g;
       mk(`set-target-${g.id}`, { area: 'setup', check: SETUP_IDS.target, campaign: cName(g.campaign),
-        title: `${gName(g.id)} targets ${money(g.targetCpa, cfg)} per ${N1}, but pays ${money(actual, cfg)}`,
-        observe: `Target CPA ${money(g.targetCpa, cfg)}; over the last ${D} days ${cName(g.campaign)} paid ${money(actual, cfg)} per ${N1} (${money(sp, cfg)} for ${Math.round(cv)} ${N}). Actual cost is campaign-level; we don’t have ad-group conversions. ${asOf}.`,
-        means: 'A target far below what the campaign achieves makes smart bidding hold back, so the campaign may lose auctions it could have won profitably.',
-        action: `Raise the target CPA towards ${money(actual, cfg)}, then lower it gradually as results allow.`,
-        expect: 'More auctions entered, at a cost per lead close to today’s.', success: `Target CPA within 30% of the actual cost per ${N1} at the next settings check.`,
-        rule: `Target CPA below ${T.target.cpaFactor}× the actual cost per conversion over the last ${D} days (target ROAS isn’t checked: no conversion values in our data). Check ${SETUP_IDS.target}.`,
-        evidence: { cols: ['Ad group', 'Target CPA', `Actual CPA (${D} days)`], rows: [[gName(g.id), g.targetCpa, actual]], money: [1, 2], rules: [], verdict: `${asOf}.` } });
+        title: `${gName(g.id)} targets ${money(g.targetCpa, cfg)} per ${N1}, below every week it achieved`,
+        observe: `Target CPA ${money(g.targetCpa, cfg)}. Over the last ${D} days ${cName(g.campaign)} paid ${money(x.actual, cfg)} per ${N1} (${money(x.spend, cfg)} for ${Math.round(x.conv)} ${N}); its best week was ${money(x.best, cfg)}. Actual cost is campaign-level; we don’t have ad-group conversions. ${asOf}.`,
+        means: 'A target below anything the campaign has achieved makes smart bidding hold back, so the campaign may lose auctions it could have won.',
+        action: `Raise the target CPA towards ${money(x.best, cfg)} (its best recent week), then lower it gradually as results allow.`,
+        expect: 'More auctions entered, at a cost per lead close to today’s.', success: `Target CPA at or above the campaign’s best recent week at the next settings check.`,
+        rule: `Target CPA below the campaign’s own lowest weekly cost per conversion over the last ${D} days (weeks with conversions only; target ROAS isn’t checked: no conversion values in our data). Check ${SETUP_IDS.target}.`,
+        evidence: { cols: ['Ad group', 'Target CPA', 'Best week CPA', `Actual CPA (${D} days)`], rows: [[gName(g.id), g.targetCpa, x.best, x.actual]], money: [1, 2, 3], rules: [], verdict: `${asOf}.` } });
     }
     // 6. Enabled but not serving
-    const ns = [];
-    for (const c of S.campaigns.filter(c => c.status === 'ENABLED' && c.servingStatus && c.servingStatus !== 'SERVING')) ns.push({ campaign: c.id, what: 'Campaign', name: c.name, why: `serving status ${c.servingStatus.toLowerCase().replace(/_/g, ' ')}` });
-    for (const g of S.adGroups.filter(g => g.status === 'ENABLED' && campOn(g.campaign) && !S.ads.some(a => a.adGroup === g.id && a.status === 'ENABLED'))) ns.push({ campaign: g.campaign, what: 'Ad group', name: g.name, why: 'no enabled ads' });
-    for (const k of live.filter(k => k.serving && k.serving !== 'ELIGIBLE')) ns.push({ campaign: k.campaign, what: 'Keyword', name: k.text, why: `serving status ${k.serving.toLowerCase().replace(/_/g, ' ')}` });
-    for (const [cid, list] of byCamp(ns)) {
+    for (const [cid, list] of byCamp(F.ns)) {
       mk(`set-notserving-${cid}`, { area: 'setup', check: SETUP_IDS.notServing, campaign: cName(cid),
         title: `${list.length} enabled item${list.length === 1 ? '' : 's'} in ${cName(cid)} ${list.length === 1 ? 'isn’t' : 'aren’t'} serving`,
         observe: `${list.map(x => `${x.what} “${x.name}”: ${x.why}`).slice(0, 3).join('; ')}${list.length > 3 ? `; and ${list.length - 3} more` : ''}. ${asOf}.`,
@@ -289,8 +309,7 @@
     }
     // 7. Poor ad strength, 8. Disapproved ads
     const adRows = (list) => list.map(a => [adName(R, a.id), gName(a.adGroup), String(a.strength || '—').toLowerCase(), String(a.approval || '—').toLowerCase()]);
-    const poor = S.ads.filter(a => a.status === 'ENABLED' && a.type === 'RESPONSIVE_SEARCH_AD' && a.strength === 'POOR');
-    for (const [cid, list] of byCamp(poor)) mk(`set-strength-${cid}`, { area: 'creative', check: SETUP_IDS.strength, campaign: cName(cid), minutes: 30,
+    for (const [cid, list] of byCamp(F.poor)) mk(`set-strength-${cid}`, { area: 'creative', check: SETUP_IDS.strength, campaign: cName(cid), minutes: 30,
       title: `${list.length} responsive search ad${list.length === 1 ? ' has' : 's have'} “Poor” ad strength in ${cName(cid)}`,
       observe: `${list.map(a => adName(R, a.id)).join(', ')}: ad strength “Poor”. ${asOf}.`,
       means: 'Poor ad strength usually means too few or too similar headlines, so Google has little to test and shows the ad less often.',
@@ -298,8 +317,7 @@
       expect: 'More impressions and a better click-through rate.', success: 'Ad strength “Good” or better at the next settings check.',
       rule: `An enabled responsive search ad with ad strength “Poor”. Check ${SETUP_IDS.strength}.`,
       evidence: { cols: ['Ad', 'Ad group', 'Strength', 'Approval'], rows: adRows(list), money: [], rules: [], verdict: `${asOf}.` } });
-    const dis = S.ads.filter(a => a.status === 'ENABLED' && a.approval === 'DISAPPROVED');
-    for (const [cid, list] of byCamp(dis)) mk(`set-disapproved-${cid}`, { area: 'creative', check: SETUP_IDS.disapproved, campaign: cName(cid), minutes: 15, confidence: 'certain',
+    for (const [cid, list] of byCamp(F.dis)) mk(`set-disapproved-${cid}`, { area: 'creative', check: SETUP_IDS.disapproved, campaign: cName(cid), minutes: 15, confidence: 'certain',
       title: `${list.length} ad${list.length === 1 ? ' is' : 's are'} disapproved in ${cName(cid)}`,
       observe: `${list.map(a => adName(R, a.id)).join(', ')}: disapproved by Google. ${asOf}.`,
       means: 'Disapproved ads can’t show. If they’re the only ads in an ad group, that ad group gets no traffic.',

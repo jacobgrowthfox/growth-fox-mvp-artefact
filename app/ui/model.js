@@ -59,10 +59,19 @@
       if (c.scanKey !== key) {
         c.scanMemo = c.scanMemo || {};
         if (!c.scanMemo[key]) { let found = []; try { const a = c.hist.days[R0.from].t, b = c.hist.days[R0.to].t; found = GF.periodRecs(cfg, a, b); } catch (e) { found = []; } c.scanMemo[key] = found; }
-        c.model = Object.assign({}, c.model0, { recs: c.model0.recs.concat(c.scanMemo[key]).sort((a, b) => b.score - a.score) });
+        c.modelBase = Object.assign({}, c.model0, { recs: c.model0.recs.concat(c.scanMemo[key]).sort((a, b) => b.score - a.score) });
         c.scanKey = key;
       }
-    } else c.model = c.model0;
+    } else c.modelBase = c.model0;
+    // Stage 1 (Paid Fox): the business profile, eligibility of every recommendation, and readiness for clients with Google Ads data.
+    const rk = profVer[cfg.id] || 0;
+    if (c.rdKey !== rk || c.lastBase !== c.modelBase) {
+      const profile = GF.profileOf(cfg.id), base = c.modelBase;
+      let rd = null; try { rd = GF.readiness(cfg, c.data, profile, base.recs); } catch (e) { rd = null; }
+      const extra = GF.gateRecs(cfg, rd);
+      c.model = Object.assign({}, base, { recs: GF.applyEligibility(base.recs.concat(extra), profile).sort((a, b) => b.score - a.score) });
+      c.readiness = rd; c.profile = profile; c.lastBase = base; c.rdKey = rk;
+    }
     c.qdec = S(cfg.id).qdec;
     return c;
   }

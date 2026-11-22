@@ -82,5 +82,6 @@
         <div><span class="eyebrow">Executive summary · ${esc(rangeText(c, chgRange(c)))}</span><p class="sum">${esc(execSummary(c))}</p></div></section>
       ${realNote(c)}
       ${execSections(c)}
+      ${profileSection(c)}
       ${footnote()}</div>`;
   }

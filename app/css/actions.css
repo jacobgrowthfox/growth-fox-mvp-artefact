@@ -63,3 +63,4 @@
 .ruleline svg { width: 15px; height: 15px; flex: none; margin-top: 2px; }
 .ruleline b { color: var(--ink-2); font-weight: 600; }
 .ltbl td small { display: block; color: var(--muted); font-size: 12px; }
+.qual-note { margin: 6px 0 0; font-size: 13px; color: var(--muted); }

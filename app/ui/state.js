@@ -37,3 +37,16 @@
       else toast('Couldn’t save to the shared ledger. Please try again.');
     }
   }
+
+  /* ---------- Business profile (Executive Fox), one shared document per client at clients/<client>/profile/business ----------
+     Read by the engine through GF.profileOf(); this file only stores it. Without the shared store it stays in this browser. */
+  const profVer = {};
+  function putProfile(cid, doc) { GF.setProfile(cid, doc); profVer[cid] = (profVer[cid] || 0) + 1; }
+  for (const cfg of GF.CLIENTS) putProfile(cfg.id, store.get('profile.' + cfg.id, null));
+  async function saveProfile(cid, doc) {
+    putProfile(cid, doc);
+    if (ledgerMode === 'local') { store.set('profile.' + cid, doc); return true; }
+    if (ledgerMode === 'readonly' || !db) return false;
+    try { await db.doc(`clients/${cid}/profile/business`).set(doc); return true; }
+    catch (e) { if (e && e.code === 'invalid_argument') ledgerMode = 'readonly'; return false; }
+  }
