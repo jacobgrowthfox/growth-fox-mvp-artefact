@@ -32,6 +32,7 @@
   };
   const checkChip = r => {
     if (r.fox !== 'paid') return '';
+    if (r.gate && !r.check) return `<span class="chip checkchip ck-green" title="Stage 1 baseline">Baseline</span>`; // a step that unlocks baseline checks
     const name = r.check && GF.PM_CHECKS[r.check];
     return name ? `<span class="chip checkchip ck-${CHECK_HUE[r.check] || 'slate'}" title="${esc(r.check)}">${esc(name)}</span>`
       : `<span class="chip checkchip off" title="${esc('Not in rubric: ' + (r.checkNote || 'app rule'))}">Not in rubric</span>`;
@@ -46,7 +47,7 @@
   };
   function unitLabel(unit) { return unit === 'revenue' ? 'revenue per day' : unit === 'dq' ? 'data quality points' : unit === 'cov' ? 'coverage points' : 'saved per day'; }
   function impactText(c, unit, v) { return unit === 'cov' ? `+${v} pts coverage` : unit === 'dq' ? `+${ptsTxt(v)} data quality` : unit === 'none' ? '—' : `+${m(v, c)} ${unit === 'revenue' ? 'revenue' : 'saved'}/day`; }
-  const AGENT = { 'setup-scan': 'Period check', settings: 'Settings check', 'spend-scan': 'Spend & optimization check', 'segment-scan': 'Segment check', 'spend-watch': 'Spend-Watch', 'paid-search': 'Paid-Search', creative: 'Creative & LP', setup: 'Setup check', audience: 'Audiences', trend: 'Spend trend', engineer: 'Arrival check', volume: 'Volume check', gap: 'Client vs server', connect: 'New source', tracking: 'Tracking', investigate: 'Investigate' };
+  const AGENT = { baseline: 'Baseline step', 'setup-scan': 'Period check', settings: 'Settings check', 'spend-scan': 'Spend & optimization check', 'segment-scan': 'Segment check', 'spend-watch': 'Spend-Watch', 'paid-search': 'Paid-Search', creative: 'Creative & LP', setup: 'Setup check', audience: 'Audiences', trend: 'Spend trend', engineer: 'Arrival check', volume: 'Volume check', gap: 'Client vs server', connect: 'New source', tracking: 'Tracking', investigate: 'Investigate' };
   // Growth bets show a range, labelled as an estimate; cuts and fixes show one observed figure.
   const nice = v => { const a = Math.abs(v), st = a >= 1000 ? 100 : a >= 200 ? 10 : a >= 50 ? 5 : 1; return Math.round(v / st) * st; };
   function betRange(c, r, per) { const k = per === 'month' ? 30 : 1, a = m(nice(r.lo * k), c), b = m(nice(r.hi * k), c); return `≈ +${c.cfg.currency === 'DKK' ? a.replace(' kr', '') : a}–${c.cfg.currency === 'DKK' ? b : b.replace('€', '')}`; }
@@ -246,7 +247,7 @@
     } else if (state.dismissing === r.id) {
       foot = `<div class="rec-foot"><div class="dismiss-box"><span>Why are you dismissing this?</span>${['Already done', 'I disagree with the data', 'Not a priority now', 'Other reason'].map(x => `<button class="fbtn" data-act="dismiss" data-id="${r.id}" data-reason="${x}">${x}</button>`).join('')}</div><button class="btn ghost" data-act="cancel-dismiss">Cancel</button></div>`;
     } else {
-      const primary = inv ? '' : owner === 'GrowthFox team' ? `<button class="btn primary" data-act="request" data-id="${r.id}">Ask our team to fix ${I.arrow}</button>` : `<button class="btn primary" data-act="adopt" data-id="${r.id}">I made this change ${I.check}</button>`;
+      const primary = inv ? '' : r.cta ? `<a class="btn primary" href="${esc(r.cta.href)}"${r.cta.act ? ` data-act="${esc(r.cta.act)}"` : ''}>${esc(r.cta.label)} ${I.arrow}</a>` : owner === 'GrowthFox team' ? `<button class="btn primary" data-act="request" data-id="${r.id}">Ask our team to fix ${I.arrow}</button>` : `<button class="btn primary" data-act="adopt" data-id="${r.id}">I made this change ${I.check}</button>`;
       foot = `<div class="rec-foot">
         <div class="meta"><span>Platform: <b style="color:var(--fg);font-weight:500">${esc(plat)}</b></span>${r.minutes ? `<span>${I.clock}~${r.minutes} min</span>` : ''}<span>${esc(AGENT[r.agent])}</span></div>
         <div class="actions">

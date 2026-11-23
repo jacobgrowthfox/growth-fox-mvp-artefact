@@ -10,7 +10,7 @@
       return r.fox === 'commercial' || r.alsoFox === 'commercial' || (r.agent === 'tracking' && ['shop', 'crm', 'app'].includes(r.platform));
     }).map(r => {
       let imp, sub, score;
-      if (r.impactTxt) { imp = r.impactTxt.imp; sub = r.impactTxt.sub; score = 0; }
+      if (r.impactTxt) { imp = r.impactTxt.imp; sub = r.impactTxt.sub; score = r.gate ? r.score : 0; } // baseline actions keep their rank (first)
       else if (r.confidence === 'investigate') { imp = r.finding ? 'To look into' : 'Investigate'; sub = r.finding ? 'found in period' : 'impact unknown'; score = -1; }
       else if (kind === 'engineer') { imp = r.ticket ? r.devTxt : `+${r.cov} pts`; sub = r.ticket ? shortImpact(c, r).replace(r.devTxt + ' ', '') : 'coverage'; score = r.score; }
       else if (kind === 'commercial' && r.agent === 'tracking') { const lost = sum(c.data.days.slice(-7).map(x => x.conv)) * (0.31 - 0.19); imp = `+${Math.round(lost)} leads/wk`; sub = 'recorded, not new'; score = lost; }

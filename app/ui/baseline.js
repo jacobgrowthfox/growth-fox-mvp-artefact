@@ -167,4 +167,4 @@
   document.addEventListener('click', ev => {
     const a = ev.target.closest('[data-act="mat-areas"]'); if (a) { ev.preventDefault(); document.getElementById('area-setup')?.closest('.sec')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   });
-  document.addEventListener('click', ev => { if (ev.target.closest('[data-act="bp-jump"]')) setTimeout(() => document.getElementById('profile')?.scrollIntoView({ block: 'start' }), 60); });
+  document.addEventListener('click', ev => { if (ev.target.closest('[data-act="bp-jump"]')) setTimeout(() => document.getElementById('profile')?.scrollIntoView({ block: 'start' }), 200); });

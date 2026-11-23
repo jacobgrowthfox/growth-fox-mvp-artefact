@@ -69,7 +69,10 @@
       const profile = GF.profileOf(cfg.id), base = c.modelBase;
       let rd = null; try { rd = GF.readiness(cfg, c.data, profile, base.recs); } catch (e) { rd = null; }
       const extra = GF.gateRecs(cfg, rd);
-      c.model = Object.assign({}, base, { recs: GF.applyEligibility(base.recs.concat(extra), profile).sort((a, b) => b.score - a.score) });
+      const recs = GF.applyEligibility(base.recs.concat(extra), profile);
+      // Findings from existing checks that are part of a baseline gate rank with the baseline actions (real clients only)
+      if (cfg.real) for (const r of recs) { const t = GF.PM_TAGS[r.check]; if (t && t.kind === 'gate' && !r.gate) { r.gate = t.gate; r.score = 4e8; } }
+      c.model = Object.assign({}, base, { recs: recs.sort((a, b) => b.score - a.score) });
       c.readiness = rd; c.profile = profile; c.lastBase = base; c.rdKey = rk;
     }
     c.qdec = S(cfg.id).qdec;

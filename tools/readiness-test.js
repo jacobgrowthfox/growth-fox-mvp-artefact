@@ -44,7 +44,7 @@ expect('1 GC-3 cites campaigns', base.gate('GC-3').evidence.campaigns, ['Hue Lea
 expect('1 categories cite contributing checks', base.rd.categories.map(c => c.contributing), [['DF-1'], ['GC-3', 'GC-4'], ['GC-2']]);
 expect('1 stage 1, provisional', [base.rd.stage.stage, base.rd.stage.provisional], [1, true]);
 expect('1 every advisory check is tagged', base.rd.advisory.every(a => a.kind === 'advisory' && a.category), true);
-expect('1 gate recs', base.recs.filter(r => r.gate).map(r => r.id).sort(), ['gate-df-1-conv', 'gate-gc-2-blockers', 'gate-gc-3-markets', 'gate-gc-4-rsa']);
+expect('1 gate recs', base.recs.filter(r => r.gate).map(r => r.id).sort(), ['gate-ask-export', 'gate-df-1-conv', 'gate-gc-2-blockers', 'gate-gc-3-markets', 'gate-gc-4-rsa']);
 
 // 2. No profile at all: only the checks that need an answer become Not Assessed.
 const none = run({}, null);
@@ -52,6 +52,8 @@ const s1 = states(base), s2 = states(none);
 expect('2 GC-1 and GC-3 Not Assessed for the profile', [none.gate('GC-1').missing.profile, none.gate('GC-3').missing.profile], [['objectives'], ['markets']]);
 expect('2 nothing else changes', ['DF-1', 'GC-2', 'GC-4', 'GC-5'].map(k => s2[k]), ['DF-1', 'GC-2', 'GC-4', 'GC-5'].map(k => s1[k]));
 expect('2 structure still judged on GC-4', cats(none).structure, 'attention');
+expect('2 an action asks for each missing answer', none.recs.filter(r => /^gate-ask-/.test(r.id)).map(r => r.id).sort(), ['gate-ask-export', 'gate-ask-markets', 'gate-ask-objectives']);
+expect('2 baseline actions rank above the rest', none.recs.filter(r => r.gate).every(r => r.score >= 2e8), true);
 
 // 3. "Not sure" and "skipped" are not answers.
 for (const st of ['unsure', 'skipped']) {

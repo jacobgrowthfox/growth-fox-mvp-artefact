@@ -351,6 +351,32 @@
       if (caps.length) mk(g5, 'caps', { campaign: caps.map(r => r[0]).join(', '), title: `${caps.length} smart-bidding campaign${caps.length === 1 ? ' has' : 's have'} a bid cap or floor`,
         observe: caps.map(r => `${r[0]}: ${r[1]}, ${r[2]}`).join('; ') + '.', means: 'A cap or floor stops smart bidding from adjusting bids, which can stop the campaign from delivering.',
         action: 'Remove the cap or floor, or move it to a portfolio strategy only where it’s needed.', evidence: { cols: ['Campaign', 'Bidding', 'Cap', 'Why'], rows: caps, money: [], rules: [], verdict: asOf ? `${asOf}.` : '' } }); }
+    // Checks that can't run yet: the steps that move the account forward are an answer in the business profile,
+    // or more settings in the Google Ads export (a GrowthFox team job).
+    const na = rd.gates.filter(g => g.status === 'not_assessed');
+    for (const f of [...new Set(na.flatMap(g => g.missing.profile))]) {
+      const gs = na.filter(g => g.missing.profile.includes(f)), q = fieldQ(f);
+      mk(gs[0], `ask-${f}`, { id: `gate-ask-${f}`, gate: gs.map(g => g.id).join(','), check: null, checkNote: 'business profile', agent: 'baseline', asOf: null, minutes: 2, confidence: 'certain', status: 'not_assessed',
+        rule: `Stage 1 baseline: ${gs.map(g => g.name.toLowerCase()).join(' and ')} can’t be judged without this answer.`, success: 'The check runs as soon as you answer.', expect: 'A baseline check that can run.',
+        title: `Tell us ${FIELD_LABEL[f]}`, observe: `${gs.length === 1 ? 'One baseline check waits' : `${gs.length} baseline checks wait`} for this answer: ${gs.map(g => g.name.toLowerCase()).join(', ')}.`,
+        means: 'Until we know this, we can’t judge that part of your account, so your baseline stays provisional.',
+        action: `Answer question ${q.n} in your business profile: “${q.q}”`, cta: { href: '#overview', label: 'Answer in your profile', act: 'bp-jump' },
+        impactTxt: { k: 'Baseline gate', imp: gs.length === 1 ? 'Unlocks a check' : `Unlocks ${gs.length} checks`, sub: 'baseline' },
+        evidence: { cols: [], rows: [], money: [], rules: [], verdict: 'Business profile, Executive page.' } });
+    }
+    const nd = na.filter(g => !g.missing.profile.length && g.missing.data.length);
+    const partsNA = rd.gates.filter(g => !g.missing.profile.length && g.missing.data.length);
+    if (partsNA.length) mk(partsNA[0], 'export', { id: 'gate-ask-export', gate: partsNA.map(g => g.id).join(','), check: null, checkNote: 'Google Ads export', agent: 'baseline', asOf: null, owner: 'GrowthFox team', minutes: 0, confidence: 'certain', status: 'not_assessed',
+      rule: 'Stage 1 baseline: parts of these checks need settings the Google Ads export doesn’t send yet.', success: 'The missing parts of the checks run after the next export.', expect: 'Every part of the baseline checks can run.',
+      title: `Add ${partsNA.reduce((a, g) => a + g.missing.data.length, 0)} missing settings to the Google Ads export`,
+      observe: `Parts of ${partsNA.length} baseline check${partsNA.length === 1 ? '' : 's'} can’t run because the export doesn’t include: ${[...new Set(partsNA.flatMap(g => g.missing.data))].join('; ')}.`,
+      means: 'Those parts of the baseline stay unassessed until the data arrives, so the stage stays provisional.',
+      action: 'Our team adds these fields to the daily BigQuery export. Nothing to change in Google Ads.',
+      impactTxt: { k: 'Baseline gate', imp: `Unlocks ${nd.length || partsNA.length} check${(nd.length || partsNA.length) === 1 ? '' : 's'}`, sub: 'baseline checks' },
+      evidence: { cols: ['Check', 'Missing from the export'], rows: partsNA.flatMap(g => g.missing.data.map(d => [g.name, d])), money: [], rules: [], verdict: 'Google Ads export (BigQuery), settings-now.' } });
+    // Baseline actions rank above everything except tracking fixes: failures first, then answers, then export work.
+    const rank = { critical: 5e8, attention: 4e8 };
+    for (const r of recs) { const g = rd.gates.find(x => x.id === String(r.gate).split(',')[0]); r.score = r.id === 'gate-ask-export' ? 2e8 : /^gate-ask-/.test(r.id) ? 3e8 : rank[g && g.status] || 3.5e8; }
     return recs;
   }
 
