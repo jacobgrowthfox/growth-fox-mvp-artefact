@@ -198,25 +198,57 @@ i.arr.quar { background: var(--bad); opacity: .8; }
 .covline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--divider); font-size: 15px; color: var(--ink-2); }
 .covline .seg { margin-left: auto; }
 
-/* Stage 1 readiness (Paid Media Fox, Google Ads): three categories, their gates and the advisory checks */
-.rd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
-.rd-cat { border: 1px solid var(--border); border-radius: 16px; padding: 18px; display: grid; gap: 10px; min-width: 0; border-top-width: 4px; }
-.rd-cat.st-critical { border-top-color: var(--bad); } .rd-cat.st-attention { border-top-color: var(--warn); } .rd-cat.st-ready { border-top-color: var(--good); } .rd-cat.st-not_assessed { border-top-color: var(--base); }
-.rd-h { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
-.rd-h > div { display: grid; gap: 2px; } .rd-h b { font-weight: 600; } .rd-h span:not(.chip) { color: var(--muted); font-size: 13px; }
-.rd-why { margin: 0; font-size: 14px; color: var(--ink-2); }
-.rd-gates { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.rd-gate { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px; min-width: 0; }
-.rd-gh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
-.rd-gh b { font-weight: 500; } .rd-gh small { color: var(--muted); font-size: 12px; } .rd-gh .chip { margin-left: auto; }
-.rd-sum, .rd-camps, .rd-need, .rd-data { margin: 0; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
-.rd-camps { color: var(--fg); }
-.rd-need { display: flex; gap: 6px; align-items: flex-start; color: var(--warn-ink); } .rd-need svg { width: 14px; height: 14px; flex: none; margin-top: 2px; }
-.rd-data { color: var(--muted); }
-.rd-parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; }
-.rd-parts li { display: flex; align-items: center; gap: 8px; } .rd-parts span { margin-left: auto; color: var(--muted); }
-.rd-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--base); }
-.rd-dot.good { background: var(--good); } .rd-dot.warn { background: var(--warn); } .rd-dot.bad { background: var(--bad); }
-.rd-ev summary { cursor: pointer; font-size: 13px; color: var(--primary); }
-.rd-ev .tbl-wrap { margin-top: 8px; }
-.rd-adv { margin: 0; font-size: 13px; color: var(--muted); } .rd-adv b { font-weight: 500; color: var(--ink-2); } .rd-n { color: var(--warn-ink); }
+/* Account maturity (Paid Media Fox, Google Ads): three stages, the Stage 1 bar split by readiness category */
+.mat { display: grid; gap: 22px; }
+.mat-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px 32px; flex-wrap: wrap; }
+.mat-top h2 { font-size: 22px; margin: 6px 0 4px; }
+.mat-top p { margin: 0; color: var(--ink-2); max-width: 60ch; }
+.mat-score { display: grid; justify-items: end; gap: 2px; }
+.mat-score b { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+.mat-score span { color: var(--muted); font-size: 13px; }
+.mat-score em { font-style: normal; font-size: 12px; font-weight: 500; color: var(--ink-2); background: var(--seg); border-radius: 10px; padding: 2px 9px; margin-top: 6px; cursor: help; }
+.mat-track { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 10px; }
+.mat-stage { display: grid; gap: 10px; min-width: 0; }
+.mat-lbl { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.mat-lbl > div { display: grid; min-width: 0; }
+.mat-lbl b { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mat-lbl small { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.mat-lbl small svg { width: 11px; height: 11px; }
+.mat-num { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 600; background: var(--seg); color: var(--muted); }
+.mat-num svg { width: 13px; height: 13px; }
+.mat-stage.cur .mat-num { background: var(--primary); color: var(--primary-fg); box-shadow: 0 0 0 4px var(--primary-soft); }
+.mat-stage.cur small { color: var(--primary); font-weight: 500; }
+.mat-stage.next b { color: var(--muted); font-weight: 500; }
+.mat-stage.done .mat-num { background: var(--good-soft); color: var(--good); }
+.mat-bar { display: flex; gap: 3px; height: 12px; }
+.mat-seg { position: relative; overflow: hidden; border-radius: 3px; background: var(--seg); }
+.mat-bar .mat-seg:first-child { border-radius: 6px 3px 3px 6px; } .mat-bar .mat-seg:last-child { border-radius: 3px 6px 6px 3px; } .mat-bar .mat-seg:only-child { border-radius: 6px; }
+.mat-fill { position: absolute; inset: 0 auto 0 0; background: var(--good); }
+.mat-seg.t-warn { background: var(--warn-soft); box-shadow: inset 0 0 0 1px #F0D7AE; }
+.mat-seg.t-bad { background: var(--bad-soft); box-shadow: inset 0 0 0 1px #F3C5C0; }
+.mat-seg.t-idle { background: repeating-linear-gradient(-45deg, var(--seg) 0 5px, var(--surface-2) 5px 10px); box-shadow: inset 0 0 0 1px var(--border); }
+.mat-seg.t-off { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--divider); }
+.mat-cats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mat-cat { border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; position: relative; }
+.mat-ch { display: grid; gap: 2px; }
+.mat-ch b { font-weight: 600; }
+.mat-state { font-size: 13px; font-weight: 500; color: var(--muted); }
+.mat-cat.t-good .mat-state { color: var(--good); } .mat-cat.t-warn .mat-state { color: var(--warn-ink); } .mat-cat.t-bad .mat-state { color: var(--bad); }
+.mat-pips { display: flex; align-items: center; gap: 5px; }
+.mat-pips i { width: 18px; height: 6px; border-radius: 3px; background: var(--seg); box-shadow: inset 0 0 0 1px var(--border); }
+.mat-pips i.p-ok { background: var(--good); box-shadow: none; } .mat-pips i.p-attention { background: var(--warn); box-shadow: none; } .mat-pips i.p-critical { background: var(--bad); box-shadow: none; }
+.mat-pips span { margin-left: 6px; font-size: 13px; color: var(--muted); }
+.mat-why { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; color: var(--ink-2); }
+.mat-why li { display: flex; gap: 8px; align-items: baseline; }
+.mat-why i { width: 6px; height: 6px; border-radius: 50%; flex: none; transform: translateY(-2px); background: var(--base); }
+.mat-why li.bad i { background: var(--bad); } .mat-why li.warn i { background: var(--warn); } .mat-why li.good i { background: var(--good); } .mat-why li.ask i { background: var(--info); }
+.mat-why li.bad, .mat-why li.warn { color: var(--fg); }
+.mat-why span[title] { cursor: help; }
+.mat-more { justify-self: start; display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 500; text-decoration: none; }
+.mat-more svg { width: 14px; height: 14px; }
+@media (max-width: 860px) { .mat-cats { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .mat-track { grid-template-columns: 1fr; gap: 14px; }
+  .mat-stage.next { grid-template-columns: minmax(0, 1fr) 72px; align-items: center; } .mat-stage.next .mat-bar { height: 8px; }
+  .mat-score { justify-items: start; }
+}

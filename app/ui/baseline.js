@@ -113,31 +113,58 @@
     if (await bpSave(c, patch)) { toast('Saved.'); bpNext(c, n); render(); bpFocus(); }
   });
 
-  /* Readiness (Paid Media Fox, Google Ads): Stage 1, the three categories, their gates and the advisory checks. */
-  const RD_ST = { critical: ['bad', 'Critical'], attention: ['warn', 'Needs attention'], ok: ['good', 'Passed'], not_assessed: ['neutral', 'Not assessed'] };
-  const CAT_CHIP = { critical: 'bad', attention: 'warn', ready: 'good', not_assessed: 'neutral' };
-  function gateRow(c, g) {
-    const [cls, lbl] = RD_ST[g.status], ev = g.evidence, id = 'rd-' + g.id;
-    const need = g.missing.profile.length ? `<p class="rd-need">${I.alert}<span>Needs your answer to ${g.missing.profile.map(f => `“${esc((GF.PROFILE_QUESTIONS.find(q => q.fields.includes(f)) || {}).q || f)}”`).join(' and ')} in the <a href="#overview" data-act="bp-jump">business profile</a>.</span></p>` : '';
-    const parts = (g.parts || []).length ? `<ul class="rd-parts">${g.parts.map(p => `<li><i class="rd-dot ${RD_ST[p.status][0]}"></i>${esc(p.label)}<span>${esc(RD_ST[p.status][1])}</span></li>`).join('')}</ul>` : '';
-    const dataNote = !g.missing.profile.length && g.missing.data.length ? `<p class="rd-data">Not in the Google Ads export yet: ${esc(g.missing.data.join('; '))}.</p>` : '';
-    const camps = ev.campaigns.length ? `<p class="rd-camps">Campaigns: ${esc(ev.campaigns.join(', '))}</p>` : '';
-    const table = ev.rows.length ? `<details class="rd-ev"><summary>Show evidence (${ev.rows.length} row${ev.rows.length === 1 ? '' : 's'})</summary><div class="tbl-wrap"><table><thead><tr>${ev.cols.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${ev.rows.map(r => `<tr>${r.map((v, i) => `<td>${typeof v === 'number' ? ((ev.money || []).includes(i) ? m(v, c) : n0(v)) : esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>` : '';
-    return `<li class="rd-gate" id="${id}"><div class="rd-gh"><b>${esc(g.name)}</b><small>${esc(g.id)}${g.interim ? ' · interim check' : ''}</small><span class="chip ${cls}">${lbl}</span></div>
-      ${g.summary ? `<p class="rd-sum">${esc(g.summary)}</p>` : ''}${camps}${need}${parts}${dataNote}${table}</li>`;
+  /* Maturity (Paid Media Fox, Google Ads): where the account sits on the three stages, and why. The Stage 1 bar is split into
+     the three readiness categories, each filled by its share of passed baseline checks. The checks themselves show up as
+     actions in the optimization areas below, so this section only summarizes. */
+  const MAT_STAGES = [
+    { n: 1, name: 'Establish Baseline', lead: 'First we make sure your tracking, campaign structure and delivery are sound. Growth advice comes after that.' },
+    { n: 2, name: 'Experimentation' },
+    { n: 3, name: 'Optimization' },
+  ];
+  const CAT_TONE = { critical: 'bad', attention: 'warn', ready: 'good', not_assessed: 'idle' };
+  const CAT_SHORT = { conversion: 'Conversions', structure: 'Structure & relevance', delivery: 'Delivery' };
+  // What a failing check means, in a few words (the check names describe the passing state)
+  const GATE_ISSUE = { 'DF-1': 'No recent conversions', 'GC-1': 'Bidding on the wrong conversions', 'GC-2': 'Something blocks delivery',
+    'GC-3': 'Ads reach areas you don’t serve', 'GC-4': 'Ad group without a usable ad', 'GC-5': 'Bidding works against delivery' };
+  const I_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  function matCatLine(k) {
+    const bad = k.gates.filter(g => g.status === 'critical' || g.status === 'attention');
+    const ask = [...new Set(k.gates.flatMap(g => g.missing.profile))], data = k.gates.filter(g => g.status === 'not_assessed' && !g.missing.profile.length);
+    const lines = [];
+    for (const g of bad) lines.push(`<li class="${g.status === 'critical' ? 'bad' : 'warn'}"><i></i>${esc(GATE_ISSUE[g.id] || g.name)}</li>`);
+    if (ask.length) lines.push(`<li class="ask"><i></i><span>Needs your answer: ${esc(ask.map(f => GF.FIELD_LABEL[f]).join(', '))} · <a href="#overview" data-act="bp-jump">Answer</a></span></li>`);
+    if (data.length) lines.push(`<li class="idle"><i></i><span title="${esc(data.flatMap(g => g.missing.data).join('; '))}">${data.length === 1 ? '1 check' : `${data.length} checks`} waiting for more Google Ads data</span></li>`);
+    if (!lines.length) lines.push(`<li class="good"><i></i>All checks passed</li>`);
+    return `<ul class="mat-why">${lines.join('')}</ul>`;
   }
   function readinessSection(c) {
     const rd = c.readiness; if (!rd) return '';
-    const s = rd.stage, nameOf = id => (rd.gates.find(g => g.id === id) || {}).name || id;
-    const cats = rd.categories.map(k => {
-      const why = k.state === 'not_assessed' ? (k.passed.length ? `Passed: ${k.passed.map(nameOf).join(', ')}. Not assessed yet: ${k.notAssessed.map(nameOf).join(', ')}.` : `Not assessed yet: ${k.notAssessed.map(nameOf).join(', ')}.`)
-        : `${k.state === 'ready' ? 'Passed' : 'Failing'}: ${k.contributing.map(nameOf).join(', ')}.${k.notAssessed.length ? ` Not assessed yet: ${k.notAssessed.map(nameOf).join(', ')}.` : ''}`;
-      const adv = k.advisory.length ? `<p class="rd-adv"><b>Advisory</b> (doesn’t change the state): ${k.advisory.map(a => `${esc(a.name)}${a.status === 'attention' ? ` <span class="rd-n">${esc(a.summary.replace(/\.$/, ''))}</span>` : ''}`).join(' · ')}</p>` : '';
-      return `<div class="rd-cat st-${k.state}"><div class="rd-h"><div><b>${esc(k.name)}</b><span>${esc(k.q)}</span></div><span class="chip ${CAT_CHIP[k.state]}">${esc(k.label)}</span></div>
-        <p class="rd-why">${esc(why)}</p><ul class="rd-gates">${k.gates.map(g => gateRow(c, g)).join('')}</ul>${adv}</div>`;
+    const s = rd.stage, cats = rd.categories, all = rd.gates, passed = all.filter(g => g.status === 'ok').length;
+    const pct = Math.round(100 * passed / Math.max(1, all.length));
+    // Stage 1 bar: one segment per category, sized by its number of checks, filled by its passed share
+    const segs = cats.map(k => { const n = k.gates.length, p = k.gates.filter(g => g.status === 'ok').length;
+      return `<span class="mat-seg t-${CAT_TONE[k.state]}" style="flex:${n}" title="${esc(`${k.name}: ${p} of ${n} checks passed`)}"><span class="mat-fill" style="width:${n ? Math.round(100 * p / n) : 0}%"></span></span>`; }).join('');
+    const stages = MAT_STAGES.map(st => {
+      const cur = st.n === s.stage, done = st.n < s.stage;
+      return `<li class="mat-stage${cur ? ' cur' : done ? ' done' : ' next'}"${cur ? ' aria-current="step"' : ''}>
+        <div class="mat-lbl"><span class="mat-num">${done ? I.check : st.n}</span><div><b>${esc(st.name)}</b><small>${cur ? 'You are here' : done ? 'Done' : `${I_LOCK}Opens after Stage ${st.n - 1}`}</small></div></div>
+        <div class="mat-bar">${cur ? segs : `<span class="mat-seg t-${done ? 'good' : 'off'}" style="flex:1"><span class="mat-fill" style="width:${done ? 100 : 0}%"></span></span>`}</div></li>`;
     }).join('');
-    return `<section class="sec rd" aria-label="Stage 1 readiness">
-      <div class="sec-head"><div class="lead"><span class="eyebrow">Stage ${s.stage} · ${esc(s.name)}${s.provisional ? ' · provisional' : ''}</span><span>${esc(s.reason)}${s.provisional ? ` Provisional while ${s.notAssessed.length} gate${s.notAssessed.length === 1 ? ' is' : 's are'} not assessed.` : ''} Only the gates below set a category’s state.</span></div></div>
-      <div class="rd-grid">${cats}</div></section>`;
+    const tiles = cats.map(k => { const n = k.gates.length, p = k.gates.filter(g => g.status === 'ok').length;
+      return `<div class="mat-cat t-${CAT_TONE[k.state]}"><div class="mat-ch"><b>${esc(k.name)}</b><span class="mat-state">${esc(k.label)}</span></div>
+        <div class="mat-pips" aria-label="${p} of ${n} checks passed">${k.gates.map(g => `<i class="p-${g.status}" title="${esc(g.name)}"></i>`).join('')}<span>${p} of ${n} passed</span></div>
+        ${matCatLine(k)}</div>`; }).join('');
+    const cur = MAT_STAGES.find(x => x.n === s.stage);
+    return `<section class="sec mat" aria-label="Account maturity">
+      <div class="mat-top"><div><span class="eyebrow">Account maturity</span><h2>Stage ${s.stage} of ${MAT_STAGES.length}: ${esc(cur.name)}</h2>
+        <p>${esc(cur.lead)} ${passed} of ${all.length} baseline checks passed so far.</p></div>
+        <div class="mat-score"><b>${pct}%</b><span>of the baseline</span>${s.provisional ? `<em title="${esc(`${s.notAssessed.length} checks can’t be assessed yet`)}">Provisional</em>` : ''}</div></div>
+      <ol class="mat-track">${stages}</ol>
+      <div class="mat-cats">${tiles}</div>
+      <a class="mat-more" href="#area-setup" data-act="mat-areas">See the actions in the optimization areas ${I.arrow}</a>
+    </section>`;
   }
+  document.addEventListener('click', ev => {
+    const a = ev.target.closest('[data-act="mat-areas"]'); if (a) { ev.preventDefault(); document.getElementById('area-setup')?.closest('.sec')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  });
   document.addEventListener('click', ev => { if (ev.target.closest('[data-act="bp-jump"]')) setTimeout(() => document.getElementById('profile')?.scrollIntoView({ block: 'start' }), 60); });
